@@ -39,7 +39,7 @@ afterAll(async () => {
   await orm.close(true);
 });
 
-test('basic CRUD example', async () => {
+test('it does not update the company version when the user is created', async () => {
   const company = orm.em.create(Company, { version: 1 });
 
   await orm.em.flush();
