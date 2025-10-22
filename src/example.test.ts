@@ -1,4 +1,16 @@
-import { Entity, MikroORM, PrimaryKey, Property } from '@mikro-orm/sqlite';
+import { DateTimeType, Entity, ManyToOne, MikroORM, Opt, PrimaryKey, Property } from '@mikro-orm/sqlite';
+
+@Entity()
+class Company {
+  @PrimaryKey()
+  id!: number;
+
+  @Property({ type: DateTimeType, onUpdate: () => new Date() })
+  updatedAt: Opt<Date> = new Date();
+
+  @Property({ version: true })
+  version!: number;
+}
 
 @Entity()
 class User {
@@ -6,17 +18,9 @@ class User {
   @PrimaryKey()
   id!: number;
 
-  @Property()
-  name: string;
-
-  @Property({ unique: true })
-  email: string;
-
-  constructor(name: string, email: string) {
-    this.name = name;
-    this.email = email;
-  }
-
+  // @ManyToOne(() => Company, { eager: true }) // - This passes
+  @ManyToOne(() => Company)
+  company!: Company;
 }
 
 let orm: MikroORM;
@@ -36,16 +40,18 @@ afterAll(async () => {
 });
 
 test('basic CRUD example', async () => {
-  orm.em.create(User, { name: 'Foo', email: 'foo' });
-  await orm.em.flush();
-  orm.em.clear();
+  const company = orm.em.create(Company, { version: 1 });
 
-  const user = await orm.em.findOneOrFail(User, { email: 'foo' });
-  expect(user.name).toBe('Foo');
-  user.name = 'Bar';
-  orm.em.remove(user);
   await orm.em.flush();
 
-  const count = await orm.em.count(User, { email: 'foo' });
-  expect(count).toBe(0);
+  await orm.em.transactional(async (em) => {
+    const user = em.create(User, { company });
+    await em.flush();
+    await em.refresh(user);
+  });
+
+  await orm.em.refresh(company);
+
+  expect(company.version).toBe(1);
+  
 });
