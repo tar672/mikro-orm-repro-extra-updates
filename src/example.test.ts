@@ -28,7 +28,7 @@ let orm: MikroORM;
 beforeAll(async () => {
   orm = await MikroORM.init({
     dbName: ':memory:',
-    entities: [User],
+    entities: [User, Company],
     debug: ['query', 'query-params'],
     allowGlobalContext: true, // only for testing
   });
